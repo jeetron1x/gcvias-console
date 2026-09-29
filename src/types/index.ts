@@ -5,7 +5,12 @@ export type StormCategory =
   | 'Severe Cyclonic Storm'
   | 'Very Severe Cyclonic Storm'
   | 'Extremely Severe Cyclonic Storm'
-  | 'Super Cyclonic Storm';
+  | 'Super Cyclonic Storm'
+  | 'Category 1 Hurricane'
+  | 'Category 2 Hurricane'
+  | 'Category 3 Major Hurricane'
+  | 'Category 4 Major Hurricane'
+  | 'Category 5 Super Typhoon';
 
 export interface QuadrantRadii {
   ne: number; // km
@@ -16,7 +21,7 @@ export interface QuadrantRadii {
 
 export interface CycloneTrackPoint {
   timestamp: string;
-  offsetHours: number; // relative to landfall / current time reference (-72 to +24)
+  offsetHours: number; // relative to reference operational time (-48 to +36)
   lat: number;
   lng: number;
   category: StormCategory;
@@ -32,14 +37,24 @@ export interface CycloneTrackPoint {
   phase: 'past' | 'current' | 'forecast';
 }
 
+export type OceanBasin =
+  | 'All Basins'
+  | 'Bay of Bengal'
+  | 'North Atlantic'
+  | 'Western Pacific'
+  | 'Eastern Pacific'
+  | 'South Indian Ocean';
+
 export interface CycloneEvent {
   id: string;
   name: string;
-  basin: string;
+  basin: OceanBasin;
+  basinAuthority: string; // e.g., 'IMD RSMC New Delhi', 'NOAA NHC Miami', 'JMA Tokyo', 'JTWC Pearl Harbor'
   referenceDate: string;
   description: string;
   currentOffsetHours: number;
-  track: CycloneTrackPoint[];
+  centerCoordinates: [number, number];
+  defaultZoom: number;
   landfall: {
     locationName: string;
     lat: number;
@@ -49,6 +64,7 @@ export interface CycloneEvent {
     maxWindAtLandfallKmh: number;
     peakSurgeMeters: number;
   };
+  track: CycloneTrackPoint[];
 }
 
 export type AssetType = 'substation' | 'hospital' | 'shelter' | 'highway';
@@ -63,13 +79,14 @@ export interface BaseAsset {
   lng: number;
   district: string;
   state: string;
+  country: string;
   block: string;
   elevationMeters: number;
 }
 
 export interface SubstationAsset extends BaseAsset {
   type: 'substation';
-  voltageKv: number; // e.g. 220, 132, 33
+  voltageKv: number; // e.g. 220, 132, 33, 500
   feederCount: number;
   hasPlinthProtection: boolean;
   generatorBackup: boolean;
@@ -180,4 +197,74 @@ export interface DispatchAuditRecord {
   targetChannels: string[];
   recipientCount: number;
   payloadSummary: string;
+}
+
+// Zoom Earth UI Display Modes
+export type MapDisplayMode =
+  | 'satellite'
+  | 'radar'
+  | 'precipitation'
+  | 'wind'
+  | 'surge'
+  | 'temperature'
+  | 'humidity'
+  | 'pressure';
+
+export type SatelliteSubMode = 'live' | 'hd';
+export type WindSubMode = 'speed' | 'gusts';
+
+// Gemini 3.7 Flash Multimodal Risk Assessment Types
+export interface GeminiDamagePathway {
+  pathwayId: string;
+  title: string;
+  mechanism: string;
+  severity: 'CATASTROPHIC' | 'SEVERE' | 'HIGH' | 'MODERATE';
+  physicalExposureDetail: string;
+  affectedInfrastructure: string[];
+  cascadingImpact: string;
+  mitigationProtocol: string;
+}
+
+export interface GeminiRiskReport {
+  reportId: string;
+  generatedAt: string;
+  model: string;
+  satelliteFeedSource: string;
+  cycloneName: string;
+  oceanBasin: string;
+  telemetrySummary: {
+    maxSustainedWindKmh: number;
+    centralPressureHpa: number;
+    forwardVelocityKmh: number;
+    peakSurgeHeightMeters: number;
+    rainAccumulation24hMm: number;
+  };
+  stormSurgeSimulation: {
+    hydrodynamicRunupMeters: number;
+    estuarinePenetrationKm: number;
+    highestRiskSectors: string[];
+    criticalBreachPoints: string[];
+  };
+  rainfallDamagePathways: {
+    peakIntensityMmPerHour: number;
+    flashFloodVulnerability: 'CATASTROPHIC' | 'SEVERE' | 'MODERATE';
+    culvertWashoutCorridors: string[];
+    orographicRainBands: string[];
+  };
+  infrastructureExposureScore: {
+    substationsCompromised: number;
+    highwaysInundatedKm: number;
+    hospitalsRequiringCriticalBackup: number;
+    shelterReadinessCount: number;
+  };
+  damagePathways: GeminiDamagePathway[];
+  statutoryAdvisories: {
+    stateFederalDirective: string;
+    districtOperationsDirective: string;
+    municipalPortDirective: string;
+  };
+  multilingualAcousticAlert: {
+    language: string;
+    alertText: string;
+  };
 }

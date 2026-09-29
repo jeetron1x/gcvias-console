@@ -1,42 +1,64 @@
 import React, { useState } from 'react';
 import { CycloneMap } from '../components/map/CycloneMap';
-import { TimelineScrubber } from '../components/dashboard/TimelineScrubber';
-import { SlidingPanel } from '../components/dashboard/SlidingPanel';
+import { ZoomEarthSidebar } from '../components/zoomearth/ZoomEarthSidebar';
+import { ZoomEarthForecastCard } from '../components/zoomearth/ZoomEarthForecastCard';
+import { ZoomEarthScrubber } from '../components/zoomearth/ZoomEarthScrubber';
+import { ZoomEarthLegend } from '../components/zoomearth/ZoomEarthLegend';
+import { GeminiRiskEngineDrawer } from '../components/ai/GeminiRiskEngineDrawer';
 import {
   CycloneEvent,
   CycloneTrackPoint,
   InfrastructureAsset,
   AuthorityRole,
-  DispatchAuditRecord
+  DispatchAuditRecord,
+  MapDisplayMode,
+  SatelliteSubMode,
+  WindSubMode
 } from '../types';
 import {
   interpolateTrackPoint,
   computeCoastalSurgeHazardZones,
   computeExposureSummary
 } from '../utils/geospatial';
-import { generateAdvisory } from '../utils/advisoryGenerator';
-import { AUTHORITY_PROFILES } from '../components/layout/Navbar';
 
 interface ConsolePageProps {
   activeCyclone: CycloneEvent;
+  onSelectCyclone: (c: CycloneEvent) => void;
+  cyclones: CycloneEvent[];
   activeRole: AuthorityRole;
   allAssets: InfrastructureAsset[];
   onAddDispatchLog: (log: DispatchAuditRecord) => void;
   selectedAsset: InfrastructureAsset | null;
   onSelectAsset: (asset: InfrastructureAsset | null) => void;
+  onNavigate: (view: 'console' | 'registry' | 'methodology' | 'dispatches' | 'privacy' | 'terms') => void;
 }
 
 export const ConsolePage: React.FC<ConsolePageProps> = ({
   activeCyclone,
+  onSelectCyclone,
+  cyclones,
   activeRole,
   allAssets,
   onAddDispatchLog,
   selectedAsset,
   onSelectAsset,
+  onNavigate,
 }) => {
+  // Zoom Earth display modes (default to 'precipitation' matching user's Image 1)
+  const [displayMode, setDisplayMode] = useState<MapDisplayMode>('precipitation');
+  const [satelliteSubMode, setSatelliteSubMode] = useState<SatelliteSubMode>('live');
+  const [windSubMode, setWindSubMode] = useState<WindSubMode>('speed');
+  const [showAssets, setShowAssets] = useState<boolean>(true);
+  const [isGeminiDrawerOpen, setIsGeminiDrawerOpen] = useState<boolean>(false);
+
   // Timeline offset state (-48 to +36 hours)
   const [currentOffsetHours, setCurrentOffsetHours] = useState<number>(0);
-  const [advisoryLanguage, setAdvisoryLanguage] = useState<string>('en');
+
+  // Hover coordinates for Zoom Earth bottom-left legend
+  const [hoverCoords, setHoverCoords] = useState<[number, number]>([
+    activeCyclone.centerCoordinates[0],
+    activeCyclone.centerCoordinates[1],
+  ]);
 
   // Compute interpolated eye telemetry at currentOffsetHours
   const currentEye: CycloneTrackPoint = interpolateTrackPoint(
@@ -47,75 +69,101 @@ export const ConsolePage: React.FC<ConsolePageProps> = ({
   // Compute dynamic coastal surge hazard zones
   const surgeZones = computeCoastalSurgeHazardZones(currentEye);
 
-  // Compute exposure summary for all infrastructure
-  const exposureSummary = computeExposureSummary(allAssets, currentEye, surgeZones);
+  // Filter assets relevant to the active storm's region or global set
+  const regionAssets = allAssets.filter((a) => {
+    // If asset is within 600km of cyclone track or center
+    const dLat = Math.abs(a.lat - activeCyclone.centerCoordinates[0]);
+    const dLng = Math.abs(a.lng - activeCyclone.centerCoordinates[1]);
+    return dLat < 6.0 && dLng < 8.0;
+  });
 
-  // Generate structured advisory
-  const activeAdvisory = generateAdvisory(
-    activeCyclone.name,
-    currentEye,
-    exposureSummary,
-    advisoryLanguage
-  );
+  const activeAssetPool = regionAssets.length > 0 ? regionAssets : allAssets;
 
-  // Profile configuration for current authority role
-  const profile = AUTHORITY_PROFILES[activeRole];
+  // Compute exposure summary for infrastructure
+  const exposureSummary = computeExposureSummary(activeAssetPool, currentEye, surgeZones);
 
-  // Map center: if asset selected, focus on asset, otherwise profile default
+  // Center on selected asset or storm center
   const mapCenter: [number, number] = selectedAsset
     ? [selectedAsset.lat, selectedAsset.lng]
-    : profile.centerCoordinates;
-  const mapZoom = selectedAsset ? 13 : profile.defaultZoom;
-
-  const handleDispatch = (channels: string[]) => {
-    const newLog: DispatchAuditRecord = {
-      id: `DISPATCH-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      advisoryId: activeAdvisory.advisoryId,
-      cycloneName: activeCyclone.name,
-      dispatchedByRole: activeRole,
-      jurisdiction: profile.jurisdictionName,
-      targetChannels: channels,
-      recipientCount: 48,
-      payloadSummary: activeAdvisory.severityHeadline,
-    };
-    onAddDispatchLog(newLog);
-  };
+    : [currentEye.lat, currentEye.lng];
+  const mapZoom = selectedAsset ? 12 : activeCyclone.defaultZoom;
 
   return (
     <div className="relative w-screen h-screen overflow-hidden select-none bg-[#070C14]">
-      {/* 1. Full-Bleed Google Maps & Zoom Earth Viewport */}
+      {/* 1. Full-Bleed Map Canvas with Animated Streamlines & Radar Overlays */}
       <CycloneMap
         currentEye={currentEye}
         trackPoints={activeCyclone.track}
-        assets={allAssets}
+        assets={activeAssetPool}
         assessments={exposureSummary.allExposed}
         surgeZones={surgeZones}
         selectedAsset={selectedAsset}
         onSelectAsset={onSelectAsset}
         center={mapCenter}
         zoom={mapZoom}
+        displayMode={displayMode}
+        satelliteSubMode={satelliteSubMode}
+        windSubMode={windSubMode}
+        showAssets={showAssets}
+        onHoverCoordinates={(coords) => setHoverCoords(coords)}
       />
 
-      {/* 2. Floating Zoom Earth Timeline Scrubber (Docked at Bottom Center) */}
-      <TimelineScrubber
+      {/* 2. Zoom Earth Left Floating Glass Sidebar (Exact look of Image 1, 2, 3) */}
+      <ZoomEarthSidebar
+        displayMode={displayMode}
+        onChangeDisplayMode={(mode) => setDisplayMode(mode)}
+        satelliteSubMode={satelliteSubMode}
+        onChangeSatelliteSubMode={(sub) => setSatelliteSubMode(sub)}
+        windSubMode={windSubMode}
+        onChangeWindSubMode={(sub) => setWindSubMode(sub)}
+        cyclones={cyclones}
+        activeCyclone={activeCyclone}
+        onSelectCyclone={(c) => {
+          onSelectCyclone(c);
+          setCurrentOffsetHours(0);
+          onSelectAsset(null);
+        }}
+        showAssets={showAssets}
+        onToggleAssets={(s) => setShowAssets(s)}
+        onOpenGeminiDrawer={() => setIsGeminiDrawerOpen(true)}
+        onOpenDispatches={() => onNavigate('dispatches')}
+        onOpenRegistry={() => onNavigate('registry')}
+      />
+
+      {/* 3. Zoom Earth Top-Right Location & 5-Day Forecast Card (Exact look of Image 1, 2, 3) */}
+      <ZoomEarthForecastCard
+        currentEye={currentEye}
+        activeCyclone={activeCyclone}
+        displayMode={displayMode}
+        selectedAsset={selectedAsset}
+        onClearAsset={() => onSelectAsset(null)}
+        onOpenGeminiDrawer={() => setIsGeminiDrawerOpen(true)}
+        onOpenMethodology={() => onNavigate('methodology')}
+        onOpenPrivacy={() => onNavigate('privacy')}
+      />
+
+      {/* 4. Zoom Earth Bottom-Center Timeline Scrubber (Exact look of Image 1, 2, 3) */}
+      <ZoomEarthScrubber
         trackPoints={activeCyclone.track}
         currentOffset={currentOffsetHours}
         onOffsetChange={(offset) => setCurrentOffsetHours(offset)}
-        landfallEtaHours={activeCyclone.landfall.estimatedEtaHours}
-        currentEye={currentEye}
       />
 
-      {/* 3. Floating Google Maps Style Sliding Drawer (Right Side) */}
-      <SlidingPanel
+      {/* 5. Zoom Earth Bottom-Left Contextual Legend & Coordinates */}
+      <ZoomEarthLegend
+        displayMode={displayMode}
+        hoverCoordinates={hoverCoords}
+      />
+
+      {/* 6. Gemini 3.7 Flash Multimodal Risk & Damage Pathways Drawer */}
+      <GeminiRiskEngineDrawer
+        isOpen={isGeminiDrawerOpen}
+        onClose={() => setIsGeminiDrawerOpen(false)}
+        activeCyclone={activeCyclone}
         currentEye={currentEye}
+        assets={activeAssetPool}
         exposure={exposureSummary}
-        selectedAsset={selectedAsset}
-        onSelectAsset={onSelectAsset}
-        advisory={activeAdvisory}
-        selectedLanguage={advisoryLanguage}
-        onChangeLanguage={(lang) => setAdvisoryLanguage(lang)}
-        onDispatch={handleDispatch}
+        onAddDispatchLog={onAddDispatchLog}
         activeRole={activeRole}
       />
     </div>

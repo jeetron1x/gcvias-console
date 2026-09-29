@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Navbar } from './components/layout/Navbar';
 import { SplashScreen } from './components/layout/SplashScreen';
 import { ConsolePage } from './pages/ConsolePage';
 import { InfrastructureRegistryPage } from './pages/InfrastructureRegistryPage';
@@ -16,7 +15,7 @@ import { CycloneEvent, AuthorityRole, InfrastructureAsset, DispatchAuditRecord }
 export const App: React.FC = () => {
   const [showSplash, setShowSplash] = useState<boolean>(true);
   const [activeCyclone, setActiveCyclone] = useState<CycloneEvent>(ACTIVE_CYCLONE_EVENTS[0]);
-  const [activeRole, setActiveRole] = useState<AuthorityRole>('SDMA');
+  const [activeRole] = useState<AuthorityRole>('SDMA');
   const [currentView, setCurrentView] = useState<
     'console' | 'registry' | 'methodology' | 'dispatches' | 'privacy' | 'terms'
   >('console');
@@ -29,21 +28,21 @@ export const App: React.FC = () => {
       advisoryId: 'ADV-BOB-DANA-001',
       cycloneName: 'Severe Cyclonic Storm DANA',
       dispatchedByRole: 'SDMA',
-      jurisdiction: 'Odisha State Coastal Zone',
+      jurisdiction: 'Bay of Bengal Coastal Zone',
       targetChannels: ['DEOC Wireless Net', 'State VHF Band', 'Coastal Siren Net'],
       recipientCount: 84,
       payloadSummary: 'Mandatory evacuation order issued for coastal wards in Dhamra and Rajnagar blocks.',
     },
     {
       id: 'DISPATCH-SEED-02',
-      timestamp: '2024-10-24T00:15:00Z',
-      advisoryId: 'ADV-BOB-DANA-002',
-      cycloneName: 'Severe Cyclonic Storm DANA',
-      dispatchedByRole: 'DISTRICT_COLLECTOR',
-      jurisdiction: 'Bhadrak Coastal District',
-      targetChannels: ['DEOC Wireless Net', 'Block SMS Relay'],
-      recipientCount: 36,
-      payloadSummary: 'Pre-positioning of heavy tree-cutting teams and emergency diesel generators along NH-16 corridor.',
+      timestamp: '2024-10-09T18:00:00Z',
+      advisoryId: 'ADV-NATL-MILTON-001',
+      cycloneName: 'Major Hurricane MILTON',
+      dispatchedByRole: 'SDMA',
+      jurisdiction: 'Tampa Bay Unified Command',
+      targetChannels: ['NOAA Weather Radio', 'State Emergency Wireless Net'],
+      recipientCount: 156,
+      payloadSummary: 'Immediate mandatory evacuation of Zone A & B barrier islands and low-lying coastal corridors.',
     }
   ]);
 
@@ -77,56 +76,20 @@ export const App: React.FC = () => {
         <SplashScreen onFinish={() => setShowSplash(false)} />
       )}
 
-      {/* 2. Google Maps Style Floating Control & Search Bar */}
-      <Navbar
-        cyclones={ACTIVE_CYCLONE_EVENTS}
-        activeCyclone={activeCyclone}
-        onSelectCyclone={(c) => setActiveCyclone(c)}
-        activeRole={activeRole}
-        onSelectRole={(r) => setActiveRole(r)}
-        currentView={currentView}
-        onNavigate={(v) => setCurrentView(v)}
-      />
-
-      {/* 3. Persistent Full-Bleed Map Canvas (Never Unmounted to Preserve Tiles & State) */}
+      {/* 2. Persistent Full-Bleed Zoom Earth Map Canvas */}
       <ConsolePage
         activeCyclone={activeCyclone}
+        onSelectCyclone={(c) => setActiveCyclone(c)}
+        cyclones={ACTIVE_CYCLONE_EVENTS}
         activeRole={activeRole}
         allAssets={COASTAL_INFRASTRUCTURE}
         onAddDispatchLog={handleAddDispatchLog}
         selectedAsset={selectedAsset}
         onSelectAsset={setSelectedAsset}
+        onNavigate={(v) => setCurrentView(v)}
       />
 
-      {/* 4. Google Maps Style Bottom Micro-Credits Bar */}
-      <div className="fixed bottom-2 right-3 z-[900] hidden sm:flex items-center space-x-2.5 bg-slate-900/90 border border-slate-700/80 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-mono text-slate-400 select-none shadow-lg">
-        <span className="text-slate-500">Cartography: CartoDB / ESRI / OSM</span>
-        <span className="text-slate-700">•</span>
-        <span className="text-slate-500">Telemetry: IMD RSMC</span>
-        <span className="text-slate-700">•</span>
-        <button
-          onClick={() => setCurrentView('privacy')}
-          className="hover:text-slate-200 transition-colors cursor-pointer"
-        >
-          Privacy
-        </button>
-        <span className="text-slate-700">•</span>
-        <button
-          onClick={() => setCurrentView('terms')}
-          className="hover:text-slate-200 transition-colors cursor-pointer"
-        >
-          Terms
-        </button>
-        <span className="text-slate-700">•</span>
-        <button
-          onClick={() => setCurrentView('methodology')}
-          className="hover:text-slate-200 transition-colors cursor-pointer"
-        >
-          Methodology
-        </button>
-      </div>
-
-      {/* 5. Dispatch Log Modal Overlay */}
+      {/* 3. Dispatch Log Modal Overlay */}
       {currentView === 'dispatches' && (
         <DispatchLogModal
           logs={dispatchLogs}
@@ -135,17 +98,17 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* 6. Smooth Secondary Views Overlay (Google Maps Style Drawer / Sheet) */}
+      {/* 4. Smooth Secondary Views Overlay (Registry, Methodology, Privacy, Terms) */}
       {currentView !== 'console' && currentView !== 'dispatches' && (
-        <div className="fixed inset-0 z-[1200] bg-black/80 backdrop-blur-md flex flex-col items-center justify-start p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[1200] bg-black/80 backdrop-blur-md flex flex-col items-center justify-start p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200 pointer-events-auto">
           <div className="w-full max-w-6xl my-auto py-4">
             {/* Header Return Bar */}
-            <div className="flex items-center justify-between mb-3 bg-slate-900/95 border border-slate-700/80 rounded-xl px-4 py-2.5 shadow-2xl backdrop-blur-md">
+            <div className="flex items-center justify-between mb-3 bg-[#121926]/95 border border-slate-700/80 rounded-xl px-4 py-2.5 shadow-2xl backdrop-blur-md">
               <div className="flex items-center space-x-2.5 font-mono text-xs text-slate-300">
                 <div className="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></div>
                 <span className="font-bold text-white uppercase tracking-wider">{currentView}</span>
                 <span className="text-slate-600">/</span>
-                <span className="text-slate-400 text-[11px]">GCVIAS Resilience Platform</span>
+                <span className="text-slate-400 text-[11px]">ZOOM EARTH AI RESILIENCE CONSOLE</span>
               </div>
               <button
                 onClick={() => setCurrentView('console')}
@@ -157,7 +120,7 @@ export const App: React.FC = () => {
             </div>
 
             {/* Dynamic View Component */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-xl shadow-2xl p-4 sm:p-6 max-h-[82vh] overflow-y-auto custom-scrollbar">
+            <div className="bg-[#121926]/90 border border-slate-800 rounded-xl shadow-2xl p-4 sm:p-6 max-h-[82vh] overflow-y-auto custom-scrollbar">
               {currentView === 'registry' && (
                 <InfrastructureRegistryPage
                   assets={COASTAL_INFRASTRUCTURE}

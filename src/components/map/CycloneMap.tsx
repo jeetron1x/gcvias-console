@@ -7,7 +7,8 @@ import {
   Polyline,
   Polygon,
   Circle,
-  useMap
+  useMap,
+  useMapEvents
 } from 'react-leaflet';
 import L from 'leaflet';
 import {
@@ -15,21 +16,20 @@ import {
   InfrastructureAsset,
   RiskBand,
   AssetExposureAssessment,
-  AssetType
+  MapDisplayMode,
+  SatelliteSubMode,
+  WindSubMode
 } from '../../types';
 import {
   generateForecastConePolygon,
   CoastalHazardZone
 } from '../../utils/geospatial';
+import { WindParticlesLayer } from './WindParticlesLayer';
+import { PrecipitationRadarLayer } from './PrecipitationRadarLayer';
 import {
   Plus,
   Minus,
-  LocateFixed,
-  Layers,
-  Map as MapIcon,
-  Eye,
-  CheckCircle2,
-  XCircle
+  LocateFixed
 } from 'lucide-react';
 
 interface CycloneMapProps {
@@ -42,121 +42,75 @@ interface CycloneMapProps {
   onSelectAsset: (asset: InfrastructureAsset | null) => void;
   center: [number, number];
   zoom: number;
+  displayMode: MapDisplayMode;
+  satelliteSubMode: SatelliteSubMode;
+  windSubMode: WindSubMode;
+  showAssets: boolean;
+  onHoverCoordinates: (coords: [number, number]) => void;
 }
 
 // Map Controller for smooth flyTo panning
 const MapViewController: React.FC<{
   center: [number, number];
   zoom: number;
-  triggerCenter?: number;
 }> = ({ center, zoom }) => {
   const map = useMap();
   useEffect(() => {
     map.flyTo(center, zoom, {
-      duration: 1.4,
+      duration: 1.5,
       easeLinearity: 0.25,
     });
   }, [center, zoom, map]);
   return null;
 };
 
-// Custom Zoom and Recenter Toolbar inside MapContainer
-const MapCustomControls: React.FC<{
+// Map Hover Listener to capture cursor coordinates
+const MapCoordinatesTracker: React.FC<{
+  onHoverCoordinates: (coords: [number, number]) => void;
+}> = ({ onHoverCoordinates }) => {
+  useMapEvents({
+    mousemove(e) {
+      onHoverCoordinates([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+  return null;
+};
+
+// Custom Zoom FAB Controls (Zoom Earth bottom-right stack)
+const ZoomFabControls: React.FC<{
   onRecenter: () => void;
 }> = ({ onRecenter }) => {
   const map = useMap();
 
   return (
-    <div className="leaflet-bottom leaflet-right !mb-28 !mr-4 z-[900] flex flex-col space-y-1.5 pointer-events-auto">
-      {/* Recenter Button */}
+    <div className="fixed bottom-4 right-4 z-[950] flex flex-col space-y-1.5 select-none pointer-events-auto">
+      <div className="bg-[#121926]/95 border border-slate-700/80 rounded-xl shadow-2xl backdrop-blur-md p-1 flex flex-col space-y-1">
+        <button
+          onClick={() => map.zoomIn()}
+          className="w-7 h-7 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+          title="Zoom in"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+        <div className="h-[1px] bg-slate-800 mx-1"></div>
+        <button
+          onClick={() => map.zoomOut()}
+          className="w-7 h-7 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+          title="Zoom out"
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+      </div>
+
       <button
         onClick={onRecenter}
-        className="w-10 h-10 bg-slate-900/95 hover:bg-slate-800 text-slate-200 border border-slate-700/80 rounded-lg shadow-xl flex items-center justify-center transition-colors"
-        title="Focus Cyclone Eye"
+        className="w-9 h-9 flex items-center justify-center bg-[#121926]/95 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 rounded-xl shadow-2xl backdrop-blur-md transition-all cursor-pointer"
+        title="Center on storm eye"
       >
         <LocateFixed className="w-4 h-4 text-sky-400" />
       </button>
-
-      {/* Zoom In */}
-      <button
-        onClick={() => map.zoomIn()}
-        className="w-10 h-10 bg-slate-900/95 hover:bg-slate-800 text-slate-200 border border-slate-700/80 rounded-t-lg shadow-xl flex items-center justify-center transition-colors"
-        title="Zoom In"
-      >
-        <Plus className="w-4 h-4" />
-      </button>
-
-      {/* Zoom Out */}
-      <button
-        onClick={() => map.zoomOut()}
-        className="w-10 h-10 bg-slate-900/95 hover:bg-slate-800 text-slate-200 border border-slate-700/80 rounded-b-lg shadow-xl flex items-center justify-center transition-colors"
-        title="Zoom Out"
-      >
-        <Minus className="w-4 h-4" />
-      </button>
     </div>
   );
-};
-
-// Custom Marker DivIcon
-const createAssetIcon = (type: AssetType, risk: RiskBand, isSelected: boolean) => {
-  const colorMap: Record<RiskBand, string> = {
-    Severe: '#DC2626',
-    High: '#EA580C',
-    Moderate: '#D97706',
-    Low: '#CA8A04',
-    Monitored: '#0284C7',
-  };
-
-  const bg = colorMap[risk] || '#64748B';
-  const size = isSelected ? 34 : 26;
-  const ring = isSelected ? 'ring-2 ring-white shadow-2xl scale-110' : 'shadow-md';
-
-  let iconSvg = '';
-  if (type === 'substation') {
-    iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
-  } else if (type === 'hospital') {
-    iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12M6 12h12"/></svg>`;
-  } else if (type === 'shelter') {
-    iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
-  } else {
-    iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M3 12h18"/></svg>`;
-  }
-
-  return L.divIcon({
-    className: 'custom-leaflet-marker',
-    html: `
-      <div style="background-color: ${bg}; width: ${size}px; height: ${size}px;" 
-           class="flex items-center justify-center rounded-lg border border-slate-900/60 ${ring} transition-all duration-200">
-        ${iconSvg}
-      </div>
-    `,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-    popupAnchor: [0, -size / 2],
-  });
-};
-
-// Cyclone Eye Vortex DivIcon
-const createEyeIcon = () => {
-  return L.divIcon({
-    className: 'custom-cyclone-eye',
-    html: `
-      <div class="relative flex items-center justify-center w-12 h-12">
-        <div class="absolute w-12 h-12 rounded-full border-2 border-red-500 bg-red-950/40 animate-ping opacity-75"></div>
-        <div class="relative w-9 h-9 rounded-full bg-red-900 border-2 border-white shadow-2xl flex items-center justify-center">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FDE047" stroke-width="2.5">
-            <circle cx="12" cy="12" r="8" stroke="#DC2626"/>
-            <path d="M12 4a8 8 0 0 1 8 8" stroke-linecap="round"/>
-            <path d="M12 20a8 8 0 0 1-8-8" stroke-linecap="round"/>
-          </svg>
-        </div>
-      </div>
-    `,
-    iconSize: [48, 48],
-    iconAnchor: [24, 24],
-    popupAnchor: [0, -24],
-  });
 };
 
 export const CycloneMap: React.FC<CycloneMapProps> = ({
@@ -169,413 +123,304 @@ export const CycloneMap: React.FC<CycloneMapProps> = ({
   onSelectAsset,
   center,
   zoom,
+  displayMode,
+  satelliteSubMode,
+  showAssets,
+  onHoverCoordinates,
 }) => {
-  // Tile Providers: Verified public zero-key high reliability endpoints
-  const [tileProvider, setTileProvider] = useState<'satellite' | 'voyager' | 'dark' | 'osm'>('satellite');
-  const [showLayerMenu, setShowLayerMenu] = useState(false);
+  const [mapCenter, setMapCenter] = useState<[number, number]>(center);
+  const [mapZoom, setMapZoom] = useState<number>(zoom);
 
-  // Overlay layer toggles
-  const [showTrack, setShowTrack] = useState(true);
-  const [showCone, setShowCone] = useState(true);
-  const [showSurge, setShowSurge] = useState(true);
-  const [showWindRadii, setShowWindRadii] = useState(true);
-  const [filterType, setFilterType] = useState<string>('all');
+  useEffect(() => {
+    setMapCenter(center);
+    setMapZoom(zoom);
+  }, [center, zoom]);
 
-  const tileUrls = {
-    satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    voyager: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    dark: 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
-    osm: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  };
+  // Track coordinates for Polyline
+  const fullTrackCoords: [number, number][] = trackPoints.map((pt) => [pt.lat, pt.lng]);
 
-  const tileAttributions = {
-    satellite: 'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics',
-    voyager: '&copy; CARTO &copy; OpenStreetMap contributors',
-    dark: '&copy; CARTO &copy; OpenStreetMap contributors',
-    osm: '&copy; OpenStreetMap contributors',
-  };
-
+  // Dynamic Uncertainty Forecast Cone
   const conePolygon = generateForecastConePolygon(trackPoints, currentEye.offsetHours);
 
-  const pastCoords: [number, number][] = trackPoints
-    .filter((p) => p.offsetHours <= currentEye.offsetHours)
-    .map((p) => [p.lat, p.lng]);
+  // Determine active tile layer URL based on display mode
+  // Satellite uses high-res ESRI satellite imagery.
+  // Wind / Precipitation / Radar uses Dark Basemap so high-energy streamlines and rainbands pop with contrast!
+  const getTileConfig = () => {
+    if (displayMode === 'satellite') {
+      if (satelliteSubMode === 'hd') {
+        return {
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          attribution: 'Imagery © ESRI World Imagery, Earthstar Geographics'
+        };
+      }
+      return {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Satellite © GEE Sentinel-3 / GOES-16'
+      };
+    }
+    // Dark Basemap (exact Zoom Earth dark backdrop from screenshots)
+    return {
+      url: 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
+      attribution: '© OpenStreetMap, © CartoDB, GEE Meteorological Feeds'
+    };
+  };
 
-  const forecastCoords: [number, number][] = trackPoints
-    .filter((p) => p.offsetHours >= currentEye.offsetHours)
-    .map((p) => [p.lat, p.lng]);
+  const tileConfig = getTileConfig();
 
-  const filteredAssets = assets.filter((asset) => {
-    if (filterType === 'all') return true;
-    return asset.type === filterType;
-  });
+  // Custom storm center eye icon with green/amber Zoom Earth tooltip badge
+  const createEyeMarkerIcon = () => {
+    const isMajor = currentEye.maxWindKmh >= 180;
+    const badgeBg = isMajor ? 'bg-red-600 border-red-400' : 'bg-emerald-600 border-emerald-400';
+
+    return L.divIcon({
+      className: 'custom-eye-marker',
+      html: `
+        <div class="relative flex items-center justify-center">
+          <!-- Pulse ring -->
+          <div class="absolute w-12 h-12 rounded-full border-2 border-sky-400/80 animate-ping opacity-75"></div>
+          <div class="absolute w-8 h-8 rounded-full border border-sky-500/90 animate-pulse bg-sky-500/20"></div>
+          <!-- Storm Center Dot -->
+          <div class="w-3.5 h-3.5 rounded-full bg-white border-2 border-sky-600 shadow-xl z-20"></div>
+          <!-- Zoom Earth Tooltip Badge (Exact from Image 3) -->
+          <div class="absolute left-6 -top-5 z-30 pointer-events-auto ${badgeBg} text-white px-2 py-1 rounded-lg shadow-xl font-mono text-[10px] leading-tight border flex flex-col whitespace-nowrap min-w-[110px]">
+            <span class="font-bold text-[11px]">${currentEye.category}</span>
+            <span class="text-slate-100 font-semibold">${currentEye.maxWindKmh} km/h • ${currentEye.centralPressureHpa} hPa</span>
+          </div>
+        </div>
+      `,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+    });
+  };
+
+  // Asset marker icon generator
+  const getAssetMarkerIcon = (asset: InfrastructureAsset, riskBand: RiskBand) => {
+    let color = '#38bdf8'; // Blue
+    if (riskBand === 'Severe') color = '#dc2626'; // Red
+    else if (riskBand === 'High') color = '#f97316'; // Orange
+    else if (riskBand === 'Moderate') color = '#eab308'; // Yellow
+
+    let symbol = '⚡';
+    if (asset.type === 'hospital') symbol = '🏥';
+    else if (asset.type === 'shelter') symbol = '🛡️';
+    else if (asset.type === 'highway') symbol = '🛣️';
+
+    return L.divIcon({
+      className: 'custom-asset-marker',
+      html: `
+        <div style="background-color: ${color}; width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); font-size: 11px;">
+          ${symbol}
+        </div>
+      `,
+      iconSize: [22, 22],
+      iconAnchor: [11, 11],
+    });
+  };
 
   return (
-    <div className="fixed inset-0 w-screen h-screen z-0 bg-[#070C14] overflow-hidden">
+    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-[#070C14] select-none">
       <MapContainer
-        center={center}
-        zoom={zoom}
-        style={{ height: '100%', width: '100%', backgroundColor: '#070C14' }}
+        center={mapCenter}
+        zoom={mapZoom}
         zoomControl={false}
+        className="w-full h-full z-0 bg-[#070C14]"
       >
-        <MapViewController center={center} zoom={zoom} />
-        <MapCustomControls onRecenter={() => onSelectAsset(null)} />
+        <MapViewController center={mapCenter} zoom={mapZoom} />
+        <MapCoordinatesTracker onHoverCoordinates={onHoverCoordinates} />
 
-        {/* Base Tile Layer */}
+        {/* 1. Underlying Satellite or Dark Basemap */}
         <TileLayer
-          key={tileProvider}
-          url={tileUrls[tileProvider]}
-          attribution={tileAttributions[tileProvider]}
-          maxZoom={19}
+          key={tileConfig.url}
+          url={tileConfig.url}
+          attribution={tileConfig.attribution}
+          maxZoom={18}
         />
 
-        {/* Forecast Uncertainty Cone */}
-        {showCone && conePolygon.length > 2 && (
+        {/* 2. Interactive Wind Vector Particles (60fps Canvas Animation when Wind mode active) */}
+        <WindParticlesLayer
+          currentEye={currentEye}
+          enabled={displayMode === 'wind'}
+        />
+
+        {/* 3. Convective Precipitation Radar Layer (when Precipitation or Radar active) */}
+        <PrecipitationRadarLayer
+          currentEye={currentEye}
+          enabled={displayMode === 'precipitation' || displayMode === 'radar'}
+        />
+
+        {/* 4. Forecast Uncertainty Cone */}
+        {conePolygon.length > 2 && (
           <Polygon
             positions={conePolygon}
             pathOptions={{
-              color: '#F59E0B',
+              color: '#38bdf8',
               weight: 1.5,
               dashArray: '4 4',
-              fillColor: '#F59E0B',
-              fillOpacity: 0.18,
+              fillColor: '#0284c7',
+              fillOpacity: 0.12,
             }}
           />
         )}
 
-        {/* Coastal Storm Surge Buffers */}
-        {showSurge &&
+        {/* 5. Cyclone Past & Forecast Track Line */}
+        {fullTrackCoords.length > 1 && (
+          <Polyline
+            positions={fullTrackCoords}
+            pathOptions={{
+              color: '#10b981',
+              weight: 2.5,
+              opacity: 0.9,
+            }}
+          />
+        )}
+
+        {/* 6. Track Waypoint Dots */}
+        {trackPoints.map((pt, idx) => {
+          const isPast = pt.phase === 'past';
+
+          return (
+            <Circle
+              key={idx}
+              center={[pt.lat, pt.lng]}
+              radius={isPast ? 12000 : 16000}
+              pathOptions={{
+                color: isPast ? '#059669' : '#0284c7',
+                fillColor: isPast ? '#10b981' : '#38bdf8',
+                fillOpacity: 0.85,
+                weight: 1.5,
+              }}
+            >
+              <Popup className="custom-leaflet-popup">
+                <div className="font-mono text-xs p-1 space-y-1 text-slate-200">
+                  <div className="font-bold text-white text-[11px]">{pt.category}</div>
+                  <div className="text-[10px] text-slate-400">T{pt.offsetHours >= 0 ? `+${pt.offsetHours}` : pt.offsetHours}h</div>
+                  <div>Wind: <span className="text-sky-400 font-bold">{pt.maxWindKmh} km/h</span></div>
+                  <div>Pressure: <span className="text-slate-200">{pt.centralPressureHpa} hPa</span></div>
+                  <div>Surge: <span className="text-red-400">{pt.surgeEstimateMeters} m</span></div>
+                </div>
+              </Popup>
+            </Circle>
+          );
+        })}
+
+        {/* 7. Storm Surge Inundation Zones (active in Surge mode or default) */}
+        {(displayMode === 'surge' || displayMode === 'precipitation') &&
           surgeZones.map((zone) => {
-            let fillColor = '#0284C7';
-            if (zone.riskBand === 'Severe') fillColor = '#DC2626';
-            else if (zone.riskBand === 'High') fillColor = '#EA580C';
-            else if (zone.riskBand === 'Moderate') fillColor = '#D97706';
+            let fillColor = '#0284c7';
+            if (zone.riskBand === 'Severe') fillColor = '#dc2626';
+            else if (zone.riskBand === 'High') fillColor = '#ea580c';
+            else if (zone.riskBand === 'Moderate') fillColor = '#ca8a04';
 
             return (
               <Polygon
                 key={zone.segmentId}
                 positions={zone.polygon}
                 pathOptions={{
-                  color: fillColor,
+                  fillColor,
+                  fillOpacity: 0.28,
                   weight: 1,
-                  fillColor: fillColor,
-                  fillOpacity: 0.42,
+                  color: fillColor,
                 }}
               >
-                <Popup className="custom-leaflet-popup">
-                  <div className="p-3 text-xs font-sans text-slate-100 bg-slate-900 border border-slate-700 rounded-lg">
-                    <div className="font-bold text-sm text-white mb-1">{zone.name}</div>
-                    <div className="text-slate-300 mb-0.5">
-                      Estimated Surge: <strong className="text-amber-400">{zone.estimatedSurgeHeightMeters}m</strong>
-                    </div>
-                    <div className="text-slate-300 mb-0.5">
-                      Risk Rating:{' '}
-                      <span className="font-bold text-red-400">{zone.riskBand}</span>
-                    </div>
-                    <div className="text-slate-400 text-[11px]">
-                      Inland penetration depth: {zone.peakInundationDistanceKm} km
-                    </div>
+                <Popup>
+                  <div className="font-mono text-xs p-1">
+                    <div className="font-bold text-white">{zone.name}</div>
+                    <div className="text-red-400">Peak Surge: {zone.estimatedSurgeHeightMeters}m</div>
+                    <div className="text-slate-300">Runup Reach: {zone.peakInundationDistanceKm} km</div>
                   </div>
                 </Popup>
               </Polygon>
             );
           })}
 
-        {/* Past Track */}
-        {showTrack && pastCoords.length > 1 && (
-          <Polyline
-            positions={pastCoords}
-            pathOptions={{
-              color: '#94A3B8',
-              weight: 3,
-              dashArray: '3 6',
-              opacity: 0.85,
-            }}
+        {/* 8. Active Storm Center Eye Marker with Zoom Earth Tooltip */}
+        <Marker
+          position={[currentEye.lat, currentEye.lng]}
+          icon={createEyeMarkerIcon()}
+        />
+
+        {/* 9. Interactive Precipitation Tooltip pinned nearby (Image 1 style) */}
+        {displayMode === 'precipitation' && (
+          <Marker
+            position={[currentEye.lat + 0.8, currentEye.lng - 0.6]}
+            icon={L.divIcon({
+              className: 'custom-rain-tooltip',
+              html: `
+                <div class="bg-[#121926]/95 border border-slate-700/80 rounded-xl px-2.5 py-1.5 shadow-2xl backdrop-blur-md text-white font-mono text-[10px] space-y-0.5 whitespace-nowrap">
+                  <div class="flex items-center space-x-1 font-bold text-sky-400">
+                    <span>🌧 Moderate Rain</span>
+                  </div>
+                  <div class="text-slate-300 text-[9px]">6 mm/h (Forecast)</div>
+                </div>
+              `,
+              iconSize: [120, 40],
+              iconAnchor: [60, 45],
+            })}
           />
         )}
 
-        {/* Forecast Track */}
-        {showTrack && forecastCoords.length > 1 && (
-          <Polyline
-            positions={forecastCoords}
-            pathOptions={{
-              color: '#DC2626',
-              weight: 4,
-              opacity: 0.95,
-            }}
-          />
-        )}
-
-        {/* Historical Track Step Markers */}
-        {showTrack &&
-          trackPoints.map((pt) => {
-            if (pt.offsetHours === currentEye.offsetHours) return null;
+        {/* 10. Critical Infrastructure Asset Markers */}
+        {showAssets &&
+          assets.map((asset) => {
+            const assessment = assessments.find((a) => a.asset.id === asset.id);
+            const riskBand: RiskBand = assessment ? assessment.riskBand : 'Low';
+            const isSelected = selectedAsset && selectedAsset.id === asset.id;
 
             return (
-              <Circle
-                key={pt.timestamp}
-                center={[pt.lat, pt.lng]}
-                radius={pt.offsetHours > currentEye.offsetHours ? 6000 : 4000}
-                pathOptions={{
-                  color: pt.offsetHours > currentEye.offsetHours ? '#F59E0B' : '#94A3B8',
-                  fillColor: pt.offsetHours > currentEye.offsetHours ? '#F59E0B' : '#64748B',
-                  fillOpacity: 0.85,
-                  weight: 1.5,
-                }}
-              >
-                <Popup>
-                  <div className="p-2.5 text-xs font-sans text-slate-100 bg-slate-900 border border-slate-700 rounded-lg">
-                    <div className="font-bold text-xs text-white">{pt.category}</div>
-                    <div className="text-slate-400 text-[11px] font-mono">
-                      T{pt.offsetHours >= 0 ? `+${pt.offsetHours}h` : `${pt.offsetHours}h`}
+              <React.Fragment key={asset.id}>
+                {isSelected && (
+                  <Circle
+                    center={[asset.lat, asset.lng]}
+                    radius={1200}
+                    pathOptions={{
+                      color: '#38bdf8',
+                      fillColor: '#38bdf8',
+                      fillOpacity: 0.35,
+                      weight: 2,
+                    }}
+                  />
+                )}
+                <Marker
+                  position={[asset.lat, asset.lng]}
+                  icon={getAssetMarkerIcon(asset, riskBand)}
+                  eventHandlers={{
+                    click: () => onSelectAsset(asset),
+                  }}
+                >
+                  <Popup>
+                    <div className="font-mono text-xs p-1 space-y-1">
+                      <div className="font-bold text-white">{asset.name}</div>
+                      <div className="text-amber-400 uppercase text-[10px]">{asset.type} • {asset.elevationMeters}m MSL</div>
+                      <div className="text-slate-300 text-[10px]">{asset.block}, {asset.district}</div>
+                      <div className="text-sky-400 font-bold">Risk: {riskBand}</div>
+                      <button
+                        onClick={() => onSelectAsset(asset)}
+                        className="w-full mt-1 bg-sky-600 hover:bg-sky-500 text-white font-bold py-1 px-2 rounded text-[10px]"
+                      >
+                        Focus Facility
+                      </button>
                     </div>
-                    <div className="text-slate-300 mt-1">Wind: {pt.maxWindKmh} km/h ({pt.maxWindKnots} kts)</div>
-                    <div className="text-slate-300">Pressure: {pt.centralPressureHpa} hPa</div>
-                    <div className="text-slate-300">Surge: {pt.surgeEstimateMeters} m</div>
-                  </div>
-                </Popup>
-              </Circle>
+                  </Popup>
+                </Marker>
+              </React.Fragment>
             );
           })}
 
-        {/* Wind Radii Circles */}
-        {showWindRadii && (
-          <>
-            <Circle
-              center={[currentEye.lat, currentEye.lng]}
-              radius={currentEye.windRadiiR50Km.ne * 1000}
-              pathOptions={{
-                color: '#EF4444',
-                weight: 1.5,
-                dashArray: '2 4',
-                fillColor: '#EF4444',
-                fillOpacity: 0.08,
-              }}
-            />
-            <Circle
-              center={[currentEye.lat, currentEye.lng]}
-              radius={currentEye.windRadiiR34Km.ne * 1000}
-              pathOptions={{
-                color: '#F59E0B',
-                weight: 1.5,
-                dashArray: '3 6',
-                fillColor: '#F59E0B',
-                fillOpacity: 0.05,
-              }}
-            />
-          </>
-        )}
-
-        {/* Cyclone Eye Marker */}
-        <Marker
-          position={[currentEye.lat, currentEye.lng]}
-          icon={createEyeIcon()}
-        >
-          <Popup>
-            <div className="p-3 text-xs font-sans text-slate-100 bg-slate-900 border border-slate-700 rounded-lg min-w-[210px]">
-              <div className="font-bold text-sm text-red-400 mb-1">
-                {currentEye.category.toUpperCase()}
-              </div>
-              <div className="text-slate-300">Central Pressure: <strong>{currentEye.centralPressureHpa} hPa</strong></div>
-              <div className="text-slate-300">Sustained Winds: <strong>{currentEye.maxWindKmh} km/h</strong></div>
-              <div className="text-slate-300">Eye Diameter: <strong>{currentEye.eyeRadiusKm * 2} km</strong></div>
-              <div className="text-slate-400 text-[11px] mt-1 font-mono">
-                {currentEye.lat.toFixed(2)}N, {currentEye.lng.toFixed(2)}E
-              </div>
-            </div>
-          </Popup>
-        </Marker>
-
-        {/* Critical Infrastructure Markers */}
-        {filteredAssets.map((asset) => {
-          const assessment = assessments.find((a) => a.asset.id === asset.id);
-          const risk: RiskBand = assessment ? assessment.riskBand : 'Monitored';
-          const isSelected = selectedAsset?.id === asset.id;
-
-          return (
-            <Marker
-              key={asset.id}
-              position={[asset.lat, asset.lng]}
-              icon={createAssetIcon(asset.type, risk, isSelected)}
-              eventHandlers={{
-                click: () => onSelectAsset(asset),
-              }}
-            >
-              <Popup>
-                <div className="p-3 text-xs font-sans text-slate-100 bg-slate-900 border border-slate-700 rounded-lg max-w-[250px]">
-                  <div className="flex items-center space-x-1.5 mb-1.5">
-                    <span className="font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                      {asset.type}
-                    </span>
-                    <span
-                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${
-                        risk === 'Severe'
-                          ? 'bg-red-600'
-                          : risk === 'High'
-                          ? 'bg-orange-600'
-                          : risk === 'Moderate'
-                          ? 'bg-amber-600'
-                          : 'bg-blue-600'
-                      }`}
-                    >
-                      {risk}
-                    </span>
-                  </div>
-                  <h4 className="font-bold text-sm text-white leading-snug mb-1">{asset.name}</h4>
-                  <div className="text-slate-400 text-xs mb-1">
-                    {asset.district} ({asset.block} Block)
-                  </div>
-                  <div className="text-slate-400 text-[11px] mb-2 font-mono">
-                    Elevation: {asset.elevationMeters}m MSL | Eye Dist: {assessment?.distanceToTrackKm || 0}km
-                  </div>
-
-                  {asset.type === 'substation' && (
-                    <div className="text-slate-300 text-[11px] mb-2 flex items-center space-x-1">
-                      <span>Plinth Barrier:</span>
-                      {asset.hasPlinthProtection ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 inline" />
-                      ) : (
-                        <XCircle className="w-3.5 h-3.5 text-red-400 inline" />
-                      )}
-                    </div>
-                  )}
-
-                  {assessment && (
-                    <div className="p-2 bg-slate-950 rounded border border-slate-800 text-[11px] text-slate-200">
-                      <strong className="text-amber-400">Directive:</strong> {assessment.recommendedAction}
-                    </div>
-                  )}
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
+        {/* Floating Zoom Controls (+/- & Recenter) */}
+        <ZoomFabControls onRecenter={() => setMapCenter([currentEye.lat, currentEye.lng])} />
       </MapContainer>
 
-      {/* Floating Basemap & Layer Control FAB (Google Maps / Zoom Earth style, top-right) */}
-      <div className="fixed top-4 right-4 z-[950] flex flex-col items-end space-y-2">
-        <button
-          onClick={() => setShowLayerMenu(!showLayerMenu)}
-          className="flex items-center space-x-2 px-3.5 py-2 bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-200 text-xs font-medium"
-        >
-          <Layers className="w-4 h-4 text-sky-400" />
-          <span className="font-mono uppercase text-[11px]">Map Layers</span>
-        </button>
-
-        {/* Expandable Layer Panel */}
-        {showLayerMenu && (
-          <div className="bg-slate-900/95 border border-slate-700/80 rounded-xl p-3 shadow-2xl backdrop-blur-md text-xs font-sans text-slate-200 w-64 animate-in fade-in zoom-in-95 duration-150 space-y-3">
-            <div>
-              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider mb-1.5 flex items-center space-x-1">
-                <MapIcon className="w-3 h-3 text-sky-400" />
-                <span>Base Imagery</span>
-              </div>
-              <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
-                <button
-                  onClick={() => setTileProvider('satellite')}
-                  className={`py-1.5 px-2 rounded-lg border text-left transition-colors ${
-                    tileProvider === 'satellite'
-                      ? 'bg-sky-950/80 text-sky-300 border-sky-500 font-bold'
-                      : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'
-                  }`}
-                >
-                  Satellite (HD)
-                </button>
-                <button
-                  onClick={() => setTileProvider('voyager')}
-                  className={`py-1.5 px-2 rounded-lg border text-left transition-colors ${
-                    tileProvider === 'voyager'
-                      ? 'bg-sky-950/80 text-sky-300 border-sky-500 font-bold'
-                      : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'
-                  }`}
-                >
-                  Google Clean
-                </button>
-                <button
-                  onClick={() => setTileProvider('dark')}
-                  className={`py-1.5 px-2 rounded-lg border text-left transition-colors ${
-                    tileProvider === 'dark'
-                      ? 'bg-sky-950/80 text-sky-300 border-sky-500 font-bold'
-                      : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'
-                  }`}
-                >
-                  Dark Radar
-                </button>
-                <button
-                  onClick={() => setTileProvider('osm')}
-                  className={`py-1.5 px-2 rounded-lg border text-left transition-colors ${
-                    tileProvider === 'osm'
-                      ? 'bg-sky-950/80 text-sky-300 border-sky-500 font-bold'
-                      : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700'
-                  }`}
-                >
-                  Topographic
-                </button>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-slate-800 space-y-1.5">
-              <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider mb-1 flex items-center space-x-1">
-                <Eye className="w-3 h-3 text-amber-400" />
-                <span>Hazard Overlays</span>
-              </div>
-              <label className="flex items-center space-x-2 cursor-pointer hover:text-white text-xs">
-                <input
-                  type="checkbox"
-                  checked={showTrack}
-                  onChange={(e) => setShowTrack(e.target.checked)}
-                  className="rounded bg-slate-800 border-slate-600 text-sky-500 focus:ring-0"
-                />
-                <span>Cyclone Track & Center</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:text-white text-xs">
-                <input
-                  type="checkbox"
-                  checked={showCone}
-                  onChange={(e) => setShowCone(e.target.checked)}
-                  className="rounded bg-slate-800 border-slate-600 text-sky-500 focus:ring-0"
-                />
-                <span>Uncertainty Cone</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:text-white text-xs">
-                <input
-                  type="checkbox"
-                  checked={showSurge}
-                  onChange={(e) => setShowSurge(e.target.checked)}
-                  className="rounded bg-slate-800 border-slate-600 text-sky-500 focus:ring-0"
-                />
-                <span>Storm Surge Inundation</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:text-white text-xs">
-                <input
-                  type="checkbox"
-                  checked={showWindRadii}
-                  onChange={(e) => setShowWindRadii(e.target.checked)}
-                  className="rounded bg-slate-800 border-slate-600 text-sky-500 focus:ring-0"
-                />
-                <span>Gale Wind Radii (R34/R50)</span>
-              </label>
-            </div>
-
-            <div className="pt-2 border-t border-slate-800">
-              <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-wider mb-1">
-                Filter Infrastructure
-              </label>
-              <select
-                aria-label="Filter Infrastructure"
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
-              >
-                <option value="all">All Infrastructure ({assets.length})</option>
-                <option value="substation">Power Substations</option>
-                <option value="hospital">Hospitals & Health Units</option>
-                <option value="shelter">Cyclone Shelters (MCS)</option>
-                <option value="highway">Highways & Bridges</option>
-              </select>
-            </div>
-          </div>
-        )}
+      {/* Model & Satellite Feed Chips (Bottom Right, matching Zoom Earth screenshots) */}
+      <div className="fixed bottom-4 right-16 z-[900] hidden sm:flex items-center space-x-2 font-mono text-[10px] select-none pointer-events-auto">
+        <div className="bg-[#121926]/90 border border-slate-700/80 px-2 py-1 rounded-lg text-slate-300 shadow-md">
+          GEE SENTINEL-3 / GOES-16
+        </div>
+        <div className="bg-[#121926]/90 border border-slate-700/80 px-2 py-1 rounded-lg text-sky-400 font-bold shadow-md">
+          GEMINI 3.7 FLASH
+        </div>
+        <div className="bg-[#121926]/90 border border-slate-700/80 px-2 py-1 rounded-lg text-slate-400 shadow-md">
+          ECMWF / GFS
+        </div>
       </div>
     </div>
   );
