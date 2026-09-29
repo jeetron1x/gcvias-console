@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-command-950 text-slate-100 antialiased font-sans;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom Tactical Scrollbars */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #0B1320;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #233554;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #344B73;
+}
+
+/* Leaflet Overrides */
+.leaflet-container {
+  font-family: inherit;
+  background-color: #070C14 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #0F172A !important;
+  color: #F8FAFC !important;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7);
+  padding: 0;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.4;
+}
+
+.leaflet-popup-tip {
+  background: #0F172A !important;
+  border: 1px solid #334155;
+}
+
+.custom-leaflet-marker {
+  background: transparent;
+  border: none;
+}
+
+/* Print Styles for Official SitRep */
+@media print {
+  header, footer, nav, button, input[type="range"], .leaflet-control {
+    display: none !important;
+  }
+  body, main {
+    background: white !important;
+    color: black !important;
+  }
+}
