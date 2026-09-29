@@ -1,68 +1,53 @@
 # Custom Domain Configuration Guide for GCVIAS
 
-This guide provides step-by-step instructions to bind a custom domain (e.g., `gcvias.youragency.org` or `cycloneresilience.in`) to the GCVIAS production deployment.
+Your application is deployed and hosted on central cloud edge servers 24 hours a day, 7 days a week, 365 days a year:
+- **Live Cloud URL**: [https://jeetron1x.github.io/gcvias-console/](https://jeetron1x.github.io/gcvias-console/)
+- **Source Repository**: [https://github.com/jeetron1x/gcvias-console](https://github.com/jeetron1x/gcvias-console)
+
+This cloud deployment is completely independent of your local computer. Even if your PC is powered off, the console remains accessible from any mobile phone, tablet, or remote computer across the globe.
 
 ---
 
-## 1. Domain Architecture Overview
+## 1. How to Bind Your Custom Domain
 
-GCVIAS is prepared for static or edge routing with automated HTTPS provisioning through modern edge hosts (Vercel, Cloudflare Pages, Netlify, or GitHub Pages).
+You can link any custom domain (e.g., `gcvias.youragency.org` or `cycloneresilience.org`) directly from your GitHub repository settings.
 
-- Configuration file for custom apex/subdomain: `CNAME` (present in repository root)
-- Edge rewrite and security header manifest: `vercel.json` (present in repository root)
-- Static entrypoint: `index.html` with explicit canonical path resolution
+### Step 1: Add Custom Domain in GitHub Pages Settings
+1. Open your repository Pages settings:
+   [https://github.com/jeetron1x/gcvias-console/settings/pages](https://github.com/jeetron1x/gcvias-console/settings/pages)
+2. Under the **Custom domain** section, enter your domain name (e.g., `cyclone.yourdomain.com` or `yourdomain.com`).
+3. Click **Save**.
 
----
+### Step 2: Configure DNS Records at Your Domain Registrar
+Log into your DNS provider (Cloudflare, GoDaddy, Namecheap, Google Domains, Route53, etc.) and add the appropriate record:
 
-## 2. DNS Record Configuration
+#### For a Subdomain (Recommended, e.g., `cyclone.yourdomain.com`):
+| Type | Host / Name | Target / Value | TTL |
+|------|-------------|----------------|-----|
+| CNAME | `cyclone` | `jeetron1x.github.io.` | Auto / 300 |
 
-### Option A: Subdomain Setup (Recommended for Institutional Portals)
-Example: `gcvias.resilience.gov.in` or `cyclone.agency.org`
+#### For an Apex / Root Domain (e.g., `yourdomain.com`):
+Add these 4 **A** records pointing to GitHub global edge IP addresses:
+| Type | Host / Name | Value | TTL |
+|------|-------------|-------|-----|
+| A | `@` | `185.199.108.153` | Auto / 300 |
+| A | `@` | `185.199.109.153` | Auto / 300 |
+| A | `@` | `185.199.110.153` | Auto / 300 |
+| A | `@` | `185.199.111.153` | Auto / 300 |
 
-| Record Type | Host / Name | Value / Target | TTL |
-|-------------|-------------|----------------|-----|
-| CNAME | `gcvias` (or your subdomain) | `cname.vercel-dns.com.` (or edge provider CNAME) | 300 / Auto |
-
-### Option B: Apex / Root Domain Setup
-Example: `cycloneresilience.org`
-
-| Record Type | Host / Name | Value / Target | TTL |
-|-------------|-------------|----------------|-----|
-| A | `@` | `76.76.21.21` (Vercel IP 1) | 300 / Auto |
-| CNAME | `www` | `cname.vercel-dns.com.` | 300 / Auto |
-
----
-
-## 3. Deployment Steps
-
-### Vercel Deployment
-1. Connect your repository to the Vercel dashboard.
-2. Navigate to **Project Settings** > **Domains**.
-3. Enter your custom domain (e.g., `gcvias.youragency.org`).
-4. Vercel automatically validates the DNS records and provisions an SSL/TLS certificate via Let's Encrypt.
-5. The `vercel.json` file in this repository ensures correct client-side SPA routing and sets strict security headers (`X-Frame-Options`, `X-Content-Type-Options`, `X-XSS-Protection`).
-
-### Cloudflare Pages Deployment
-1. Connect repository in Cloudflare Dashboard under **Workers & Pages**.
-2. Build command: `npm run build`
-3. Build output directory: `dist`
-4. In Cloudflare Pages project settings, add **Custom Domain**. Cloudflare will handle DNS proxying and Universal SSL automatically.
-
-### GitHub Pages Deployment
-1. Update `CNAME` with your exact custom domain name.
-2. In your GitHub repository settings, go to **Pages** > **Custom domain** and input the domain.
-3. Check the **Enforce HTTPS** box once DNS records propagate.
+### Step 3: Enforce HTTPS
+Once DNS records propagate (typically 1 to 5 minutes), return to [GitHub Pages Settings](https://github.com/jeetron1x/gcvias-console/settings/pages) and check **Enforce HTTPS**. A free SSL certificate from Let's Encrypt will be issued automatically.
 
 ---
 
-## 4. Verification & Diagnostics
+## 2. DNS Verification Command
 
-To verify your DNS propagation from your workstation terminal:
+To verify that your custom domain DNS is live from any terminal:
 
 ```bash
 # Check CNAME record
-nslookup -type=CNAME gcvias.youragency.org
+nslookup -type=CNAME cyclone.yourdomain.com
 
-# Verify HTTP/2 and SSL status
-curl -I https://gcvias.youragency.org
+# Check HTTP status
+curl -I https://cyclone.yourdomain.com
 ```
