@@ -12,7 +12,7 @@ import {
   Database,
   Send,
   ChevronDown,
-  Globe2,
+  Shield,
   Search,
   Check
 } from 'lucide-react';
@@ -72,27 +72,25 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
 
   return (
     <aside className="fixed top-4 left-4 z-[950] font-sans select-none flex flex-col space-y-2 pointer-events-auto">
-      {/* 1. Zoom Earth Brand & Global Storm Selector Pill */}
-      <div className="bg-[#121926]/95 border border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-md p-2.5 w-48 space-y-2">
-        {/* Brand Header */}
+      {/* 1. GCVIAS Brand & Global Threat Switcher */}
+      <div className="bg-[#121926]/95 border border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-md p-2.5 w-52 space-y-2">
+        {/* Brand Identity */}
         <div className="flex items-center space-x-2 px-1 pt-0.5">
-          <div className="relative w-7 h-7 rounded-full bg-gradient-to-tr from-sky-600 to-cyan-400 p-[1.5px] flex items-center justify-center shadow-lg shadow-sky-500/20">
-            <div className="w-full h-full rounded-full bg-[#0a101d] flex items-center justify-center">
-              <Globe2 className="w-4 h-4 text-sky-400" />
-            </div>
+          <div className="w-7 h-7 rounded-xl bg-sky-950 border border-sky-600/80 flex items-center justify-center shadow-lg shadow-sky-900/30">
+            <Shield className="w-4 h-4 text-sky-400" />
           </div>
           <div>
             <div className="flex items-center space-x-1">
-              <span className="font-bold text-xs tracking-wider text-white">ZOOM</span>
-              <span className="font-bold text-xs tracking-wider text-sky-400">EARTH</span>
+              <span className="font-bold text-xs tracking-wider text-white">GCVIAS</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
             </div>
             <span className="text-[9px] font-mono text-slate-400 block -mt-0.5 uppercase tracking-wider">
-              AI RISK ENGINE
+              CYCLONE RISK PLATFORM
             </span>
           </div>
         </div>
 
-        {/* Global Active Storm Button */}
+        {/* Global Active Storm Switcher */}
         <button
           onClick={() => setShowCycloneModal(true)}
           className="w-full bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700 text-left px-2.5 py-1.5 rounded-xl transition-all flex items-center justify-between group cursor-pointer shadow-sm"
@@ -109,12 +107,12 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
         </button>
       </div>
 
-      {/* 2. Zoom Earth Floating Sidebar Menu (Exact look of Image 1, 2, and 3) */}
-      <div className="bg-[#121926]/95 border border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-md p-2.5 w-48 space-y-3 max-h-[calc(100vh-160px)] overflow-y-auto custom-scrollbar text-xs">
-        {/* LIVE MAPS Section */}
+      {/* 2. Floating Tactical GIS Controls (Dark Meteorological Palette) */}
+      <div className="bg-[#121926]/95 border border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-md p-2.5 w-52 space-y-3 max-h-[calc(100vh-160px)] overflow-y-auto custom-scrollbar text-xs">
+        {/* SATELLITE & RADAR Section */}
         <div className="space-y-1">
           <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold px-2 block">
-            LIVE MAPS
+            OBSERVATIONAL FEEDS
           </span>
 
           {/* Satellite */}
@@ -127,7 +125,7 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
             }`}
           >
             <Satellite className="w-3.5 h-3.5" />
-            <span className="flex-1">Satellite</span>
+            <span className="flex-1">Satellite Feed</span>
           </button>
 
           {/* Satellite Sub-options (Live vs HD) if active */}
@@ -140,7 +138,7 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
                 }`}
               >
                 {satelliteSubMode === 'live' && <Check className="w-3 h-3 text-sky-400" />}
-                <span className={satelliteSubMode !== 'live' ? 'pl-4' : ''}>Live</span>
+                <span className={satelliteSubMode !== 'live' ? 'pl-4' : ''}>GEE Composite</span>
               </button>
               <button
                 onClick={() => onChangeSatelliteSubMode('hd')}
@@ -164,17 +162,17 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
             }`}
           >
             <Radio className="w-3.5 h-3.5" />
-            <span className="flex-1">Radar</span>
+            <span className="flex-1">Doppler Radar</span>
           </button>
         </div>
 
-        {/* FORECAST MAPS Section */}
+        {/* METEOROLOGICAL FORECAST FEEDS Section */}
         <div className="space-y-1 pt-1 border-t border-slate-800">
           <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold px-2 block">
-            FORECAST MAPS
+            PREDICTIVE HAZARDS
           </span>
 
-          {/* Precipitation (Image 1 active mode) */}
+          {/* Precipitation */}
           <button
             onClick={() => onChangeDisplayMode('precipitation')}
             className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl font-medium transition-all text-left ${
@@ -184,10 +182,10 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
             }`}
           >
             <CloudRain className="w-3.5 h-3.5" />
-            <span className="flex-1">Precipitation</span>
+            <span className="flex-1">Precipitation Bands</span>
           </button>
 
-          {/* Wind (Image 3 active mode) */}
+          {/* Wind Streamlines */}
           <button
             onClick={() => onChangeDisplayMode('wind')}
             className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl font-medium transition-all text-left ${
@@ -197,7 +195,7 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
             }`}
           >
             <Wind className="w-3.5 h-3.5" />
-            <span className="flex-1">Wind</span>
+            <span className="flex-1">Wind Field (Vectors)</span>
           </button>
 
           {/* Wind Sub-options (Speed vs Gusts) if active */}
@@ -210,7 +208,7 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
                 }`}
               >
                 {windSubMode === 'speed' && <Check className="w-3 h-3 text-sky-400" />}
-                <span className={windSubMode !== 'speed' ? 'pl-4' : ''}>Wind Speed</span>
+                <span className={windSubMode !== 'speed' ? 'pl-4' : ''}>Sustained Wind</span>
               </button>
               <button
                 onClick={() => onChangeWindSubMode('gusts')}
@@ -219,12 +217,12 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
                 }`}
               >
                 {windSubMode === 'gusts' && <Check className="w-3 h-3 text-sky-400" />}
-                <span className={windSubMode !== 'gusts' ? 'pl-4' : ''}>Wind Gusts</span>
+                <span className={windSubMode !== 'gusts' ? 'pl-4' : ''}>Peak Gusts</span>
               </button>
             </div>
           )}
 
-          {/* Surge & Flood */}
+          {/* Storm Surge Inundation */}
           <button
             onClick={() => onChangeDisplayMode('surge')}
             className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl font-medium transition-all text-left ${
@@ -234,7 +232,7 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
             }`}
           >
             <Waves className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="flex-1">Surge & Flood</span>
+            <span className="flex-1">Storm Surge Inundation</span>
           </button>
 
           {/* Temperature */}
@@ -247,7 +245,7 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
             }`}
           >
             <Thermometer className="w-3.5 h-3.5" />
-            <span className="flex-1">Temperature</span>
+            <span className="flex-1">Air Temperature</span>
           </button>
 
           {/* Humidity */}
@@ -260,10 +258,10 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
             }`}
           >
             <Droplets className="w-3.5 h-3.5" />
-            <span className="flex-1">Humidity</span>
+            <span className="flex-1">Relative Humidity</span>
           </button>
 
-          {/* Pressure */}
+          {/* Pressure Isobars */}
           <button
             onClick={() => onChangeDisplayMode('pressure')}
             className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl font-medium transition-all text-left ${
@@ -273,14 +271,14 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
             }`}
           >
             <Gauge className="w-3.5 h-3.5" />
-            <span className="flex-1">Pressure</span>
+            <span className="flex-1">Barometric Pressure</span>
           </button>
         </div>
 
-        {/* AI & INFRASTRUCTURE Section */}
+        {/* AI & VULNERABILITY REASONING Section */}
         <div className="space-y-1 pt-1 border-t border-slate-800">
           <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold px-2 block">
-            AI & EXPOSURE
+            AI REASONING & ASSETS
           </span>
 
           {/* Critical Assets Toggle */}
@@ -293,7 +291,7 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
             }`}
           >
             <Database className="w-3.5 h-3.5 text-amber-400" />
-            <span className="flex-1">Critical Assets</span>
+            <span className="flex-1">Critical Infrastructure</span>
             <span className={`w-2 h-2 rounded-full ${showAssets ? 'bg-amber-400 animate-pulse' : 'bg-slate-600'}`} />
           </button>
 
@@ -303,7 +301,7 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
             className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl font-medium text-left bg-gradient-to-r from-sky-600/30 to-indigo-600/30 hover:from-sky-600/50 hover:to-indigo-600/50 border border-sky-500/40 text-sky-200 hover:text-white transition-all shadow-sm"
           >
             <Sparkles className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-            <span className="flex-1 font-semibold">Gemini 3.7 AI</span>
+            <span className="flex-1 font-semibold">Gemini 3.7 Damage AI</span>
           </button>
 
           {/* Dispatches */}
@@ -312,7 +310,7 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
             className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl font-medium text-left text-slate-300 hover:bg-slate-800/70 hover:text-white transition-all"
           >
             <Send className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="flex-1">Dispatches</span>
+            <span className="flex-1">Early-Warning Orders</span>
           </button>
 
           {/* Full Registry */}
@@ -320,7 +318,7 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
             onClick={onOpenRegistry}
             className="w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-xl font-medium text-left text-slate-400 hover:bg-slate-800/70 hover:text-white transition-all text-[11px]"
           >
-            <span>Asset Registry & CSV</span>
+            <span>Facility Registry & CSV</span>
           </button>
         </div>
       </div>
@@ -331,9 +329,9 @@ export const ZoomEarthSidebar: React.FC<ZoomEarthSidebarProps> = ({
           <div className="bg-[#121926] border border-slate-700 rounded-2xl max-w-2xl w-full p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center space-x-2">
-                <Globe2 className="w-5 h-5 text-sky-400" />
+                <Shield className="w-5 h-5 text-sky-400" />
                 <h2 className="text-sm font-bold font-mono text-white tracking-wide">
-                  GLOBAL TROPICAL CYCLONE FORECASTER (ALL BASINS)
+                  GLOBAL FORECASTED & ACTIVE CYCLONES
                 </h2>
               </div>
               <button

@@ -8,8 +8,7 @@ import {
   ShieldAlert,
   Volume2,
   Download,
-  CheckCircle2,
-  Key
+  CheckCircle2
 } from 'lucide-react';
 import {
   CycloneEvent,
@@ -46,13 +45,11 @@ export const GeminiRiskEngineDrawer: React.FC<GeminiRiskEngineDrawerProps> = ({
 }) => {
   const [report, setReport] = useState<GeminiRiskReport | null>(null);
   const [loading, setLoading] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [showKeyConfig, setShowKeyConfig] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [dispatchedSuccess, setDispatchedSuccess] = useState(false);
 
   // Trigger analysis when opened or cyclone changes
-  const executeAnalysis = async (customKey?: string) => {
+  const executeAnalysis = async () => {
     setLoading(true);
     setDispatchedSuccess(false);
     try {
@@ -60,8 +57,7 @@ export const GeminiRiskEngineDrawer: React.FC<GeminiRiskEngineDrawerProps> = ({
         activeCyclone,
         currentEye,
         assets,
-        exposure,
-        customKey || apiKeyInput
+        exposure
       );
       setReport(res);
     } catch (err) {
@@ -156,13 +152,6 @@ export const GeminiRiskEngineDrawer: React.FC<GeminiRiskEngineDrawerProps> = ({
 
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => setShowKeyConfig(!showKeyConfig)}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-mono transition-colors"
-              title="Configure Custom Gemini API Key"
-            >
-              <Key className="w-4 h-4" />
-            </button>
-            <button
               onClick={onClose}
               className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors"
             >
@@ -170,34 +159,6 @@ export const GeminiRiskEngineDrawer: React.FC<GeminiRiskEngineDrawerProps> = ({
             </button>
           </div>
         </div>
-
-        {/* API Key Drawer (Optional for custom key) */}
-        {showKeyConfig && (
-          <div className="bg-slate-900/90 border-b border-slate-800 p-3 text-xs space-y-2 font-mono">
-            <div className="flex items-center justify-between text-slate-300">
-              <span>Google Gemini API Key (Optional)</span>
-              <span className="text-[10px] text-slate-500">Autonomous fallback active</span>
-            </div>
-            <div className="flex space-x-2">
-              <input
-                type="password"
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
-                placeholder="AIzaSy..."
-                className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-sky-500 font-mono"
-              />
-              <button
-                onClick={() => {
-                  setShowKeyConfig(false);
-                  executeAnalysis(apiKeyInput);
-                }}
-                className="px-3 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-bold"
-              >
-                Apply & Run
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Drawer Body */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { SplashScreen } from './components/layout/SplashScreen';
 import { ConsolePage } from './pages/ConsolePage';
 import { InfrastructureRegistryPage } from './pages/InfrastructureRegistryPage';
 import { MethodologyPage } from './pages/MethodologyPage';
@@ -13,7 +12,6 @@ import { COASTAL_INFRASTRUCTURE } from './data/infrastructureData';
 import { CycloneEvent, AuthorityRole, InfrastructureAsset, DispatchAuditRecord } from './types';
 
 export const App: React.FC = () => {
-  const [showSplash, setShowSplash] = useState<boolean>(true);
   const [activeCyclone, setActiveCyclone] = useState<CycloneEvent>(ACTIVE_CYCLONE_EVENTS[0]);
   const [activeRole] = useState<AuthorityRole>('SDMA');
   const [currentView, setCurrentView] = useState<
@@ -71,12 +69,7 @@ export const App: React.FC = () => {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-[#070C14] text-slate-100 font-sans select-none">
-      {/* 1. Minimalist Meteorological Splash Screen */}
-      {showSplash && (
-        <SplashScreen onFinish={() => setShowSplash(false)} />
-      )}
-
-      {/* 2. Persistent Full-Bleed Zoom Earth Map Canvas */}
+      {/* 1. Persistent Full-Bleed Map Canvas (Instant Load - No Flash Screen) */}
       <ConsolePage
         activeCyclone={activeCyclone}
         onSelectCyclone={(c) => setActiveCyclone(c)}
@@ -89,7 +82,7 @@ export const App: React.FC = () => {
         onNavigate={(v) => setCurrentView(v)}
       />
 
-      {/* 3. Dispatch Log Modal Overlay */}
+      {/* 2. Dispatch Log Modal Overlay */}
       {currentView === 'dispatches' && (
         <DispatchLogModal
           logs={dispatchLogs}
@@ -98,7 +91,7 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* 4. Smooth Secondary Views Overlay (Registry, Methodology, Privacy, Terms) */}
+      {/* 3. Smooth Secondary Views Overlay (Registry, Methodology, Privacy, Terms) */}
       {currentView !== 'console' && currentView !== 'dispatches' && (
         <div className="fixed inset-0 z-[1200] bg-black/80 backdrop-blur-md flex flex-col items-center justify-start p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200 pointer-events-auto">
           <div className="w-full max-w-6xl my-auto py-4">
@@ -108,7 +101,7 @@ export const App: React.FC = () => {
                 <div className="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></div>
                 <span className="font-bold text-white uppercase tracking-wider">{currentView}</span>
                 <span className="text-slate-600">/</span>
-                <span className="text-slate-400 text-[11px]">ZOOM EARTH AI RESILIENCE CONSOLE</span>
+                <span className="text-slate-400 text-[11px]">GCVIAS AI RESILIENCE CONSOLE</span>
               </div>
               <button
                 onClick={() => setCurrentView('console')}

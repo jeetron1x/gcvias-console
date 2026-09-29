@@ -29,7 +29,8 @@ import { PrecipitationRadarLayer } from './PrecipitationRadarLayer';
 import {
   Plus,
   Minus,
-  LocateFixed
+  LocateFixed,
+  Layers
 } from 'lucide-react';
 
 interface CycloneMapProps {
@@ -76,10 +77,12 @@ const MapCoordinatesTracker: React.FC<{
   return null;
 };
 
-// Custom Zoom FAB Controls (Zoom Earth bottom-right stack)
+// Custom Zoom FAB Controls with Layer Toggle
 const ZoomFabControls: React.FC<{
   onRecenter: () => void;
-}> = ({ onRecenter }) => {
+  currentLayer: string;
+  onToggleLayer: () => void;
+}> = ({ onRecenter, currentLayer, onToggleLayer }) => {
   const map = useMap();
 
   return (
@@ -101,6 +104,14 @@ const ZoomFabControls: React.FC<{
           <Minus className="w-4 h-4" />
         </button>
       </div>
+
+      <button
+        onClick={onToggleLayer}
+        className="w-9 h-9 flex items-center justify-center bg-[#121926]/95 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 rounded-xl shadow-2xl backdrop-blur-md transition-all cursor-pointer"
+        title={`Current basemap: ${currentLayer}. Click to toggle (Dark / OSM / Satellite).`}
+      >
+        <Layers className="w-4 h-4 text-emerald-400" />
+      </button>
 
       <button
         onClick={onRecenter}
@@ -130,6 +141,7 @@ export const CycloneMap: React.FC<CycloneMapProps> = ({
 }) => {
   const [mapCenter, setMapCenter] = useState<[number, number]>(center);
   const [mapZoom, setMapZoom] = useState<number>(zoom);
+  const [tileOverride, setTileOverride] = useState<'auto' | 'dark' | 'osm' | 'satellite'>('auto');
 
   useEffect(() => {
     setMapCenter(center);
@@ -142,27 +154,37 @@ export const CycloneMap: React.FC<CycloneMapProps> = ({
   // Dynamic Uncertainty Forecast Cone
   const conePolygon = generateForecastConePolygon(trackPoints, currentEye.offsetHours);
 
-  // Determine active tile layer URL based on display mode
-  // Satellite uses high-res ESRI satellite imagery.
-  // Wind / Precipitation / Radar uses Dark Basemap so high-energy streamlines and rainbands pop with contrast!
+  // Robust, zero-key, unblocked tile endpoints
   const getTileConfig = () => {
-    if (displayMode === 'satellite') {
-      if (satelliteSubMode === 'hd') {
-        return {
-          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-          attribution: 'Imagery © ESRI World Imagery, Earthstar Geographics'
-        };
-      }
+    if (tileOverride === 'osm') {
       return {
-        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        attribution: 'Satellite © GEE Sentinel-3 / GOES-16'
+        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        subdomains: 'abc',
+        attribution: '© OpenStreetMap contributors'
       };
     }
-    // Dark Basemap (exact Zoom Earth dark backdrop from screenshots)
+    if (tileOverride === 'satellite' || (tileOverride === 'auto' && displayMode === 'satellite')) {
+      return {
+        url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        subdomains: undefined,
+        attribution: `Satellite © GEE Sentinel / ESRI (${satelliteSubMode === 'hd' ? 'HD Infrared' : 'Composite'})`
+      };
+    }
+    // High reliability Dark Basemap with subdomains
     return {
-      url: 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
+      url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+      subdomains: 'abcd',
       attribution: '© OpenStreetMap, © CartoDB, GEE Meteorological Feeds'
     };
+  };
+
+  const handleCycleLayer = () => {
+    setTileOverride((prev) => {
+      if (prev === 'auto') return 'osm';
+      if (prev === 'osm') return 'satellite';
+      if (prev === 'satellite') return 'dark';
+      return 'auto';
+    });
   };
 
   const tileConfig = getTileConfig();
@@ -233,7 +255,8 @@ export const CycloneMap: React.FC<CycloneMapProps> = ({
           key={tileConfig.url}
           url={tileConfig.url}
           attribution={tileConfig.attribution}
-          maxZoom={18}
+          subdomains={tileConfig.subdomains || 'abc'}
+          maxZoom={19}
         />
 
         {/* 2. Interactive Wind Vector Particles (60fps Canvas Animation when Wind mode active) */}
@@ -406,8 +429,12 @@ export const CycloneMap: React.FC<CycloneMapProps> = ({
             );
           })}
 
-        {/* Floating Zoom Controls (+/- & Recenter) */}
-        <ZoomFabControls onRecenter={() => setMapCenter([currentEye.lat, currentEye.lng])} />
+        {/* Floating Zoom Controls (+/- & Recenter & Layer Toggle) */}
+        <ZoomFabControls
+          onRecenter={() => setMapCenter([currentEye.lat, currentEye.lng])}
+          currentLayer={tileOverride}
+          onToggleLayer={handleCycleLayer}
+        />
       </MapContainer>
 
       {/* Model & Satellite Feed Chips (Bottom Right, matching Zoom Earth screenshots) */}
