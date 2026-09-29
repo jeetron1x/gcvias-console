@@ -1,12 +1,12 @@
 import React from 'react';
 import {
   ShieldAlert,
-  Radio,
+  ChevronDown,
   Layers,
-  FileText,
   Database,
   Building2,
-  ChevronDown
+  Radio,
+  FileCheck
 } from 'lucide-react';
 import { CycloneEvent, AuthorityRole, AuthorityProfile } from '../../types';
 
@@ -57,138 +57,129 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigate,
 }) => {
   return (
-    <header className="border-b border-command-800 bg-command-950 text-slate-200 sticky top-0 z-50 shadow-md">
-      {/* Top Telemetry Strip */}
-      <div className="bg-command-900 border-b border-command-800/80 px-4 py-1.5 flex flex-wrap items-center justify-between text-xs font-mono text-slate-400">
-        <div className="flex items-center space-x-4">
-          <span className="flex items-center text-slate-300">
-            <Radio className="w-3.5 h-3.5 mr-1.5 text-emerald-500 animate-pulse" />
-            TELEMETRY LINK: ONLINE
-          </span>
-          <span className="hidden sm:inline-block text-command-600">|</span>
-          <span className="hidden sm:inline-block">IMD BULLETIN REF: RSMC-BOB/08</span>
-          <span className="hidden md:inline-block text-command-600">|</span>
-          <span className="hidden md:inline-block">DATUM: WGS-84 / UTM ZONE 45N</span>
-        </div>
-        <div className="flex items-center space-x-3">
-          <span className="text-amber-400 font-medium">SECURITY LEVEL: RESTRICTED OFFICIAL USE</span>
-          <span className="text-command-600">|</span>
-          <span>NODE: BOB-EAST-01</span>
-        </div>
-      </div>
-
-      {/* Main Bar */}
-      <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-4">
-        {/* Brand & System Code */}
-        <div className="flex items-center space-x-3 cursor-pointer" onClick={() => onNavigate('console')}>
-          <div className="w-10 h-10 bg-command-900 border border-command-700 rounded-md flex items-center justify-center text-amber-500 shadow-inner">
-            <ShieldAlert className="w-6 h-6 text-hazard-severe" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-bold text-base tracking-wide text-white font-mono">GCVIAS</span>
-              <span className="text-xs bg-command-800 text-slate-300 px-2 py-0.5 rounded border border-command-700">v1.4-PROD</span>
+    <header className="fixed top-4 left-4 z-[950] max-w-lg w-[92%] sm:w-auto font-sans select-none pointer-events-auto">
+      {/* Floating Card (Google Maps Style) */}
+      <div className="bg-slate-900/95 border border-slate-700/80 rounded-xl shadow-2xl backdrop-blur-md p-2.5 space-y-2">
+        {/* Top Operational Status Strip */}
+        <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2">
+          {/* Logo & System Code */}
+          <div
+            onClick={() => onNavigate('console')}
+            className="flex items-center space-x-2 cursor-pointer group"
+          >
+            <div className="w-8 h-8 rounded-lg bg-red-950/80 border border-red-700 flex items-center justify-center text-red-400 group-hover:scale-105 transition-transform">
+              <ShieldAlert className="w-4 h-4" />
             </div>
-            <p className="text-xs text-slate-400 tracking-tight hidden sm:block">
-              Geospatial Cyclone Vulnerability & Infrastructure Assessment System
-            </p>
+            <div>
+              <div className="flex items-center space-x-1.5">
+                <span className="font-mono text-xs font-bold text-white tracking-wide">GCVIAS</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400 block -mt-0.5">
+                Bay of Bengal Resilience Console
+              </span>
+            </div>
           </div>
-        </div>
 
-        {/* Cyclone Selector & Role Switcher */}
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          {/* Cyclone Dropdown */}
+          {/* Storm Selector */}
           <div className="relative">
-            <label className="block text-[10px] text-slate-400 uppercase tracking-wider font-mono mb-0.5">Active Storm Threat</label>
-            <div className="relative">
-              <select
-                aria-label="Active Storm Threat"
-                value={activeCyclone.id}
-                onChange={(e) => {
-                  const found = cyclones.find((c) => c.id === e.target.value);
-                  if (found) onSelectCyclone(found);
-                }}
-                className="appearance-none bg-command-900 border border-command-700 text-slate-100 text-xs rounded-md pl-2.5 pr-8 py-1.5 focus:outline-none focus:border-command-500 font-mono cursor-pointer"
-              >
-                {cyclones.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.landfall.categoryAtLandfall})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-2.5 text-slate-400 pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Authority Scope Dropdown */}
-          <div className="relative">
-            <label className="block text-[10px] text-slate-400 uppercase tracking-wider font-mono mb-0.5">Operating Authority</label>
-            <div className="relative">
-              <select
-                aria-label="Operating Authority"
-                value={activeRole}
-                onChange={(e) => onSelectRole(e.target.value as AuthorityRole)}
-                className="appearance-none bg-command-900 border border-command-700 text-slate-100 text-xs rounded-md pl-2.5 pr-8 py-1.5 focus:outline-none focus:border-command-500 font-mono cursor-pointer"
-              >
-                <option value="SDMA">State Disaster Management Authority (State)</option>
-                <option value="DISTRICT_COLLECTOR">District Collector (Bhadrak District)</option>
-                <option value="MUNICIPAL_COMMANDER">Municipal Response Unit (Dhamra)</option>
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-2.5 text-slate-400 pointer-events-none" />
-            </div>
+            <select
+              aria-label="Active Cyclone Threat"
+              value={activeCyclone.id}
+              onChange={(e) => {
+                const found = cyclones.find((c) => c.id === e.target.value);
+                if (found) onSelectCyclone(found);
+              }}
+              className="appearance-none bg-slate-800/90 border border-slate-700 text-slate-200 text-[11px] font-mono rounded-lg pl-2 pr-6 py-1 focus:outline-none cursor-pointer"
+            >
+              {cyclones.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-3 h-3 absolute right-2 top-2 text-slate-400 pointer-events-none" />
           </div>
         </div>
 
-        {/* Primary Navigation Buttons */}
-        <nav className="flex items-center space-x-1 sm:space-x-2">
+        {/* Operational Authority Switcher */}
+        <div className="flex items-center justify-between text-xs font-mono bg-slate-950/80 border border-slate-800 rounded-lg p-1.5">
+          <span className="text-[10px] text-slate-400 uppercase tracking-wider pl-1">Authority:</span>
+          <select
+            aria-label="Operational Authority Scope"
+            value={activeRole}
+            onChange={(e) => onSelectRole(e.target.value as AuthorityRole)}
+            className="bg-transparent text-sky-400 font-bold text-xs focus:outline-none cursor-pointer text-right pr-1"
+          >
+            <option value="SDMA" className="bg-slate-900 text-slate-100">Odisha State SDMA (Statewide)</option>
+            <option value="DISTRICT_COLLECTOR" className="bg-slate-900 text-slate-100">District Collector (Bhadrak)</option>
+            <option value="MUNICIPAL_COMMANDER" className="bg-slate-900 text-slate-100">Municipal Unit (Dhamra Port)</option>
+          </select>
+        </div>
+
+        {/* Quick-Navigation Tabs (Google Maps Style Quick Buttons) */}
+        <div className="flex items-center space-x-1 pt-0.5 overflow-x-auto custom-scrollbar">
           <button
             onClick={() => onNavigate('console')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
               currentView === 'console'
-                ? 'bg-command-800 text-white border-command-600'
-                : 'text-slate-400 hover:text-white border-transparent hover:bg-command-900'
+                ? 'bg-sky-600 text-white font-bold shadow'
+                : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
-            <span>GIS Console</span>
+            <Layers className="w-3 h-3" />
+            <span>Map</span>
           </button>
 
           <button
             onClick={() => onNavigate('registry')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
               currentView === 'registry'
-                ? 'bg-command-800 text-white border-command-600'
-                : 'text-slate-400 hover:text-white border-transparent hover:bg-command-900'
+                ? 'bg-sky-600 text-white font-bold shadow'
+                : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700'
             }`}
           >
-            <Database className="w-3.5 h-3.5" />
-            <span>Infrastructure</span>
+            <Database className="w-3 h-3" />
+            <span>Assets</span>
           </button>
 
           <button
             onClick={() => onNavigate('dispatches')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
               currentView === 'dispatches'
-                ? 'bg-command-800 text-white border-command-600'
-                : 'text-slate-400 hover:text-white border-transparent hover:bg-command-900'
+                ? 'bg-sky-600 text-white font-bold shadow'
+                : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700'
             }`}
           >
-            <FileText className="w-3.5 h-3.5" />
-            <span>Dispatch Log</span>
+            <Radio className="w-3 h-3" />
+            <span>Dispatches</span>
           </button>
 
           <button
             onClick={() => onNavigate('methodology')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
               currentView === 'methodology'
-                ? 'bg-command-800 text-white border-command-600'
-                : 'text-slate-400 hover:text-white border-transparent hover:bg-command-900'
+                ? 'bg-sky-600 text-white font-bold shadow'
+                : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700'
             }`}
           >
-            <Building2 className="w-3.5 h-3.5" />
+            <Building2 className="w-3 h-3" />
             <span>Methodology</span>
           </button>
-        </nav>
+
+          <button
+            onClick={() => onNavigate('privacy')}
+            className={`flex items-center space-x-1.5 px-2 py-1 rounded-lg text-xs font-medium transition-all ${
+              currentView === 'privacy'
+                ? 'bg-sky-600 text-white font-bold shadow'
+                : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700'
+            }`}
+            title="Privacy Policy"
+          >
+            <FileCheck className="w-3 h-3" />
+            <span>Legal</span>
+          </button>
+        </div>
       </div>
     </header>
   );

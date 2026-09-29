@@ -1,5 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Play, Pause, RotateCcw, Clock, FastForward, Rewind } from 'lucide-react';
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  FastForward,
+  Rewind,
+  Wind,
+  Gauge,
+  Waves,
+  Clock
+} from 'lucide-react';
 import { CycloneTrackPoint } from '../../types';
 
 interface TimelineScrubberProps {
@@ -7,6 +17,7 @@ interface TimelineScrubberProps {
   currentOffset: number;
   onOffsetChange: (offset: number) => void;
   landfallEtaHours: number;
+  currentEye: CycloneTrackPoint;
 }
 
 export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
@@ -14,8 +25,10 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
   currentOffset,
   onOffsetChange,
   landfallEtaHours,
+  currentEye,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1); // 1x, 2x, 4x
 
   const minOffset = trackPoints.length > 0 ? trackPoints[0].offsetHours : -48;
   const maxOffset = trackPoints.length > 0 ? trackPoints[trackPoints.length - 1].offsetHours : 36;
@@ -24,50 +37,52 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | null = null;
     if (isPlaying) {
+      const intervalMs = Math.round(1500 / playbackSpeed);
       timer = setInterval(() => {
         onOffsetChange(
           currentOffset >= maxOffset ? minOffset : Math.min(maxOffset, currentOffset + 6)
         );
-      }, 1500);
+      }, intervalMs);
     }
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [isPlaying, currentOffset, minOffset, maxOffset, onOffsetChange]);
+  }, [isPlaying, currentOffset, minOffset, maxOffset, onOffsetChange, playbackSpeed]);
 
   const formatOffsetLabel = (offset: number) => {
-    if (offset === 0) return 'T-00h [CURRENT LIVE SITREP]';
-    if (offset < 0) return `T${offset}h [${Math.abs(offset)}h PRIOR TO REF]`;
-    return `T+${offset}h [FORECAST MODEL]`;
+    if (offset === 0) return 'T-00h (CURRENT LIVE REF)';
+    if (offset < 0) return `T${offset}h (${Math.abs(offset)}h TO LANDFALL)`;
+    return `T+${offset}h (FORECAST INLAND)`;
   };
 
   return (
-    <div className="bg-command-900 border border-command-800 rounded-lg p-3.5 shadow-lg font-sans">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-2.5">
-        {/* Left: Scrubber Controls */}
-        <div className="flex items-center space-x-2">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[950] w-[95%] max-w-4xl bg-slate-900/90 border border-slate-700/80 rounded-xl shadow-2xl backdrop-blur-md p-3.5 font-sans select-none transition-all duration-200">
+      {/* Top Row: Playback Controls & Meteorological Telemetry Badges */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 mb-2">
+        {/* Playback Controls */}
+        <div className="flex items-center space-x-1.5">
           <button
             onClick={() => onOffsetChange(Math.max(minOffset, currentOffset - 6))}
             disabled={currentOffset <= minOffset}
-            className="p-1.5 bg-command-800 hover:bg-command-700 disabled:opacity-40 text-slate-300 rounded-md border border-command-700 transition-colors"
+            className="p-1.5 bg-slate-800/80 hover:bg-slate-700 disabled:opacity-30 text-slate-300 rounded-lg border border-slate-700 transition-colors"
             title="Step Back 6 Hours"
           >
-            <Rewind className="w-4 h-4" />
+            <Rewind className="w-3.5 h-3.5" />
           </button>
 
           <button
             onClick={() => setIsPlaying(!isPlaying)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-command-800 hover:bg-command-700 text-amber-400 font-mono text-xs font-bold rounded-md border border-command-700 transition-colors"
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-mono text-xs font-bold rounded-lg shadow-md transition-all active:scale-95"
           >
             {isPlaying ? (
               <>
-                <Pause className="w-3.5 h-3.5 fill-amber-400" />
+                <Pause className="w-3.5 h-3.5 fill-white" />
                 <span>PAUSE</span>
               </>
             ) : (
               <>
-                <Play className="w-3.5 h-3.5 fill-amber-400" />
-                <span>RUN SIMULATION</span>
+                <Play className="w-3.5 h-3.5 fill-white" />
+                <span>SIMULATE</span>
               </>
             )}
           </button>
@@ -75,10 +90,10 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
           <button
             onClick={() => onOffsetChange(Math.min(maxOffset, currentOffset + 6))}
             disabled={currentOffset >= maxOffset}
-            className="p-1.5 bg-command-800 hover:bg-command-700 disabled:opacity-40 text-slate-300 rounded-md border border-command-700 transition-colors"
+            className="p-1.5 bg-slate-800/80 hover:bg-slate-700 disabled:opacity-30 text-slate-300 rounded-lg border border-slate-700 transition-colors"
             title="Advance 6 Hours"
           >
-            <FastForward className="w-4 h-4" />
+            <FastForward className="w-3.5 h-3.5" />
           </button>
 
           <button
@@ -86,29 +101,53 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
               setIsPlaying(false);
               onOffsetChange(0);
             }}
-            className="flex items-center space-x-1 px-2 py-1.5 bg-command-800 hover:bg-command-700 text-slate-300 text-xs rounded-md border border-command-700 transition-colors font-mono"
+            className="px-2 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs rounded-lg border border-slate-700 transition-colors font-mono flex items-center space-x-1"
             title="Reset to Present"
           >
-            <RotateCcw className="w-3 h-3" />
+            <RotateCcw className="w-3 h-3 text-slate-400" />
             <span className="hidden sm:inline">NOW</span>
+          </button>
+
+          {/* Speed Multiplier Button */}
+          <button
+            onClick={() => setPlaybackSpeed(playbackSpeed === 1 ? 2 : playbackSpeed === 2 ? 4 : 1)}
+            className="px-2 py-1 bg-slate-800/80 hover:bg-slate-700 text-amber-400 font-mono text-[11px] font-bold rounded-lg border border-slate-700"
+            title="Playback Speed"
+          >
+            {playbackSpeed}x
           </button>
         </div>
 
-        {/* Center/Right: Current Timestamp & Landfall ETA */}
-        <div className="flex items-center space-x-4 text-xs font-mono">
-          <div className="flex items-center space-x-1.5 text-slate-300 bg-command-950 px-2.5 py-1 rounded border border-command-800">
-            <Clock className="w-3.5 h-3.5 text-amber-500" />
-            <span className="font-bold text-amber-400">{formatOffsetLabel(currentOffset)}</span>
+        {/* Live Telemetry Chips (Zoom Earth Style) */}
+        <div className="flex items-center space-x-2 text-xs font-mono">
+          <div className="flex items-center space-x-1.5 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 text-slate-300">
+            <Clock className="w-3.5 h-3.5 text-amber-400" />
+            <span className="font-bold text-amber-300">{formatOffsetLabel(currentOffset)}</span>
           </div>
 
-          <div className="text-slate-400 hidden md:block">
-            LANDFALL ETA: <span className="text-white font-bold">{Math.max(0, landfallEtaHours - currentOffset)} HOURS</span>
+          <div className="hidden md:flex items-center space-x-1 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800 text-slate-300">
+            <Wind className="w-3 h-3 text-sky-400" />
+            <span>{currentEye.maxWindKmh} km/h</span>
+          </div>
+
+          <div className="hidden lg:flex items-center space-x-1 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800 text-slate-300">
+            <Gauge className="w-3 h-3 text-blue-400" />
+            <span>{currentEye.centralPressureHpa} hPa</span>
+          </div>
+
+          <div className="hidden sm:flex items-center space-x-1 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800 text-red-400 font-bold">
+            <Waves className="w-3 h-3 text-red-400" />
+            <span>Surge {currentEye.surgeEstimateMeters}m</span>
+          </div>
+
+          <div className="hidden xl:flex items-center space-x-1 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800 text-amber-300 font-mono">
+            <span>Landfall: T{landfallEtaHours >= 0 ? `+${landfallEtaHours}` : landfallEtaHours}h</span>
           </div>
         </div>
       </div>
 
-      {/* Range Slider Track */}
-      <div className="relative pt-1 pb-3">
+      {/* Scrub Range Slider Track */}
+      <div className="relative pt-1 pb-1">
         <input
           type="range"
           min={minOffset}
@@ -116,25 +155,28 @@ export const TimelineScrubber: React.FC<TimelineScrubberProps> = ({
           step={6}
           value={currentOffset}
           onChange={(e) => onOffsetChange(Number(e.target.value))}
-          className="w-full h-2 bg-command-950 rounded-lg appearance-none cursor-pointer accent-amber-500 border border-command-800"
+          className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-400 border border-slate-700 focus:outline-none"
         />
 
-        {/* 6-hour interval tick labels */}
-        <div className="flex justify-between text-[10px] font-mono text-slate-400 mt-2 px-1">
+        {/* Ticks and Labels */}
+        <div className="flex justify-between text-[10px] font-mono text-slate-400 mt-1.5 px-0.5">
           {trackPoints.map((pt) => {
             const isSelected = pt.offsetHours === currentOffset;
             const isZero = pt.offsetHours === 0;
+
             return (
               <button
                 key={pt.timestamp}
                 onClick={() => onOffsetChange(pt.offsetHours)}
                 className={`flex flex-col items-center group transition-colors ${
-                  isSelected ? 'text-amber-400 font-bold' : isZero ? 'text-white' : 'hover:text-slate-200'
+                  isSelected ? 'text-sky-400 font-bold' : isZero ? 'text-white' : 'hover:text-slate-200'
                 }`}
               >
-                <span className={`w-1 h-2 rounded-sm mb-1 ${
-                  isSelected ? 'bg-amber-400' : isZero ? 'bg-white' : 'bg-command-700'
-                }`}></span>
+                <span
+                  className={`w-1 h-1.5 rounded-sm mb-0.5 ${
+                    isSelected ? 'bg-sky-400' : isZero ? 'bg-white' : 'bg-slate-700'
+                  }`}
+                ></span>
                 <span>{pt.offsetHours >= 0 ? `+${pt.offsetHours}h` : `${pt.offsetHours}h`}</span>
               </button>
             );
